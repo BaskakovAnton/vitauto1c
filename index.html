@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конфигуратор матрицы видимости колонок — Витавто (1С:УНФ)</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --border:#dbe0e6; --text:#1f2937; --muted:#6b7280;
+    --accent:#2563eb; --accent-dark:#1d4ed8;
+    --green-bg:#d9f2df; --green-bd:#8fd6a4;
+    --yellow-bg:#fdf3d0; --yellow-bd:#e6c766;
+    --gray-bg:#e9ebee; --gray-bd:#c7ccd3;
+    --danger:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,sans-serif;font-size:13px;}
+  header.app{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:1px solid var(--border);padding:10px 16px;}
+  h1{font-size:16px;margin:0 0 2px;}
+  .sub{color:var(--muted);font-size:12px;margin-bottom:8px;}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px;}
+  .toolbar .grow{flex:1 1 auto;}
+  input[type=text]{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:220px;}
+  button{cursor:pointer;border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);}
+  button:hover{background:#eef1f5;}
+  button.primary{background:var(--accent);border-color:var(--accent-dark);color:#fff;}
+  button.primary:hover{background:var(--accent-dark);}
+  button.danger{color:var(--danger);border-color:#f3b4ae;}
+  button.danger:hover{background:#fdeceb;}
+  button.toggle.active{background:var(--accent);color:#fff;border-color:var(--accent-dark);}
+
+  .roles-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;}
+  .roles-tabs button{padding:7px 12px;border-radius:6px 6px 0 0;border-bottom:none;}
+  .roles-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent-dark);}
+
+  .level-toggle{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .level-toggle button{border:none;border-radius:0;}
+  .level-toggle button.active{background:var(--accent);color:#fff;}
+
+  .legend{display:flex;gap:16px;align-items:center;color:var(--muted);font-size:11px;padding:6px 16px;flex-wrap:wrap;}
+  .legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.15);}
+  .sw.green{background:var(--green-bg);border-color:var(--green-bd);}
+  .sw.yellow{background:var(--yellow-bg);border-color:var(--yellow-bd);}
+  .sw.gray{background:var(--gray-bg);border-color:var(--gray-bd);}
+
+  .bulk-panel{display:none;flex-wrap:wrap;gap:8px;align-items:center;background:#f0f4fa;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:8px 16px 0;}
+  .bulk-panel.open{display:flex;}
+  .bulk-panel .grp{display:flex;gap:4px;align-items:center;border-right:1px solid var(--border);padding-right:10px;margin-right:2px;}
+  .bulk-panel .grp:last-child{border-right:none;}
+  .bulk-panel select{padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px;}
+  .bulk-panel label{color:var(--muted);font-size:11px;}
+
+  .table-wrap{margin:12px 16px 24px;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--panel);max-height:72vh;}
+  table{border-collapse:separate;border-spacing:0;min-width:1200px;width:100%;}
+  thead th{position:sticky;top:0;background:#eef1f6;border-bottom:2px solid var(--border);border-left:1px solid var(--border);padding:6px 4px;font-size:11px;font-weight:600;text-align:center;z-index:5;white-space:normal;min-width:118px;}
+  thead th.col-head{position:sticky;left:0;top:0;z-index:6;text-align:left;min-width:250px;background:#eef1f6;}
+  tbody th.row-head{position:sticky;left:0;background:var(--panel);border-right:2px solid var(--border);border-bottom:1px solid var(--border);text-align:left;padding:6px 8px;font-weight:500;min-width:250px;max-width:250px;z-index:4;}
+  tbody th.row-head .id{display:block;color:var(--muted);font-size:10px;font-family:Consolas,monospace;}
+  tbody tr:nth-child(even) th.row-head{background:#fafbfc;}
+  td.matrix-cell{border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px;vertical-align:middle;transition:background-color .1s;}
+  td.matrix-cell.cell-green{background:var(--green-bg);}
+  td.matrix-cell.cell-yellow{background:var(--yellow-bg);}
+  td.matrix-cell.cell-gray{background:var(--gray-bg);}
+  .cell-stack{display:flex;flex-direction:column;gap:3px;align-items:center;}
+  .cell-stack select{width:100%;font-size:10px;padding:2px;border-radius:4px;border:1px solid rgba(0,0,0,.2);}
+  .cell-stack .chk-row{display:flex;justify-content:space-between;width:100%;gap:4px;}
+  .cell-stack label.chk{display:flex;align-items:center;gap:2px;font-size:10px;color:#374151;white-space:nowrap;}
+  .cell-stack input[type=checkbox]{width:13px;height:13px;}
+  select.c-role-for{margin-top:2px;}
+  select.c-role-for[hidden]{display:none;}
+
+  tr.filtered-out{display:none;}
+
+  footer.app{padding:10px 16px 30px;color:var(--muted);font-size:11px;}
+  .badge{display:inline-block;background:#eef1f6;border-radius:4px;padding:2px 6px;font-size:11px;color:var(--muted);}
+  .status-line{padding:4px 16px 0;color:var(--muted);font-size:11px;}
+  #importFile{display:none;}
+
+  .status-mode-toggle{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .status-mode-toggle button{border:none;border-radius:0;}
+  .status-mode-toggle button.active{background:var(--accent);color:#fff;}
+  .status-nav{display:flex;align-items:center;gap:6px;}
+  .status-nav select{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;max-width:220px;}
+
+  .log-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--danger);color:#fff;font-size:10px;margin-left:6px;}
+  .log-badge[hidden]{display:none;}
+
+  .preview-panel{margin:8px 16px 0;border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:10px 12px;}
+  .preview-panel h2{font-size:13px;margin:0 0 6px;font-weight:600;}
+  .preview-sub{color:var(--muted);font-size:11px;margin-bottom:8px;}
+  .preview-table-wrap{overflow:auto;}
+  table.preview-table{border-collapse:collapse;width:100%;min-width:900px;}
+  table.preview-table th{background:#eef1f6;border:1px solid var(--border);padding:5px 6px;font-size:10.5px;text-align:left;white-space:nowrap;}
+  table.preview-table td{border:1px solid var(--border);padding:4px 5px;vertical-align:middle;}
+  table.preview-table input{width:100%;box-sizing:border-box;border:1px solid transparent;background:transparent;font-size:11.5px;padding:3px 4px;border-radius:4px;font-family:inherit;color:var(--text);}
+  table.preview-table td.prev-editable{background:var(--green-bg);}
+  table.preview-table td.prev-editable input{background:#fff;border-color:var(--green-bd);}
+  table.preview-table td.prev-readonly{background:var(--yellow-bg);}
+  table.preview-table td.prev-readonly input{cursor:not-allowed;color:#4b5563;}
+  table.preview-table td.prev-bool{text-align:center;}
+  table.preview-table td.prev-bool input[type=checkbox]{width:16px;height:16px;cursor:pointer;}
+  table.preview-table td.prev-readonly.prev-bool input[type=checkbox]{cursor:not-allowed;}
+  table.preview-table td.prev-required input{border-color:var(--danger);}
+  table.preview-table .req-star{color:var(--danger);margin-left:2px;}
+  .preview-empty{color:var(--muted);font-style:italic;padding:6px 4px;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:100;}
+  .modal-overlay[hidden]{display:none;}
+  .modal{background:var(--panel);border-radius:10px;width:min(920px,92vw);max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+  .modal-head h2{margin:0;font-size:15px;}
+  .modal-actions{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;justify-content:space-between;align-items:center;}
+  .modal-body{overflow:auto;padding:0 16px 16px;}
+  table.log-table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.log-table th, table.log-table td{border-bottom:1px solid var(--border);padding:6px 6px;text-align:left;white-space:nowrap;}
+  table.log-table th{position:sticky;top:0;background:var(--panel);}
+  .btn-close{border:none;background:none;font-size:18px;cursor:pointer;color:var(--muted);line-height:1;}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <h1>Конфигуратор матрицы видимости и редактирования колонок — Витавто (1С:УНФ)</h1>
+  <div class="sub">Прототип для настройки прав «Роль × Статус × Колонка» с сохранением в localStorage браузера. Не подключается к 1С, не содержит реальных данных. Рядом: <a href="process.html">интерактивный процесс</a>, <a href="br-fr-analysis.html">разбор БТ/ФТ</a>, <a href="bt.html">БТ</a>, <a href="ft.html">ФТ</a>, <a href="approve.html">протокол апрувов</a>, <a href="protocol-map.html">карта протокола</a>.</div>
+
+  <div class="toolbar">
+    <a href="process.html" style="display:inline-flex;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);text-decoration:none;font-size:12px;">Процесс B5</a>
+    <a href="br-fr-analysis.html" style="display:inline-flex;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);text-decoration:none;font-size:12px;">Разбор БТ/ФТ</a>
+    <a href="approve.html" style="display:inline-flex;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);text-decoration:none;font-size:12px;">Протокол апрувов</a>
+    <a href="protocol-map.html" style="display:inline-flex;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);text-decoration:none;font-size:12px;">Карта протокола</a>
+    <div class="level-toggle" id="levelToggle">
+      <button data-level="order" class="active">Уровень статуса: Заказ</button>
+      <button data-level="line">Деталь (строка)</button>
+    </div>
+    <div class="status-mode-toggle" id="statusModeToggle">
+      <button data-mode="all" class="active">Показать все статусы</button>
+      <button data-mode="single">По одному статусу</button>
+    </div>
+    <div class="status-nav" id="statusNav">
+      <button id="btnPrevStatus" title="Предыдущий статус">◀</button>
+      <select id="statusJump" title="Перейти к статусу"></select>
+      <button id="btnNextStatus" title="Следующий статус">▶</button>
+    </div>
+    <input type="text" id="searchInput" placeholder="Поиск колонки по названию или ID…">
+    <div class="grow"></div>
+    <button id="btnLog">Журнал изменений<span class="log-badge" id="logBadge" hidden>0</span></button>
+    <button id="btnBulk">Массовые операции ▾</button>
+    <button id="btnExport">Экспорт JSON</button>
+    <button id="btnImport">Импорт JSON</button>
+    <input type="file" id="importFile" accept="application/json">
+    <button id="btnReset" class="danger">Сбросить к умолчаниям</button>
+  </div>
+
+  <div class="roles-tabs" id="roleTabs"></div>
+</header>
+
+<div class="bulk-panel" id="bulkPanel">
+  <div class="grp">
+    <label>Видимость (для роли, видимых колонок):</label>
+    <button data-op="show-all">Показать все</button>
+    <button data-op="hide-all">Скрыть все</button>
+  </div>
+  <div class="grp">
+    <label>Редактирование:</label>
+    <button data-op="edit-all">Разрешить редактирование</button>
+    <button data-op="edit-none">Только чтение</button>
+  </div>
+  <div class="grp">
+    <label>Обязательность:</label>
+    <button data-op="req-on">Сделать обязательным</button>
+    <button data-op="req-off">Снять обязательность</button>
+  </div>
+  <div class="grp">
+    <label>Копировать роль →</label>
+    <select id="copyRoleSource"></select>
+    <button id="btnCopyRole">Копировать в текущую</button>
+  </div>
+  <div class="grp">
+    <label>Копировать статус:</label>
+    <select id="copyStatusSource"></select>
+    <span>→</span>
+    <select id="copyStatusTarget"></select>
+    <button id="btnCopyStatus">Копировать</button>
+  </div>
+</div>
+
+<div class="legend">
+  <span><span class="sw green"></span>видно + редактируется</span>
+  <span><span class="sw yellow"></span>видно + только чтение</span>
+  <span><span class="sw gray"></span>скрыто</span>
+  <span class="badge" id="statusLine"></span>
+</div>
+
+<div class="preview-panel" id="previewPanel">
+  <h2>Как это увидит роль «<span id="previewRoleName"></span>» — пример строк таблицы (статус: <span id="previewStatusName"></span>)</h2>
+  <div class="preview-sub">Зелёные поля — доступны для редактирования, жёлтые — только для просмотра. Колонки, скрытые для роли на этом статусе, в примере не показываются. Галка «Документ подписан оригинал» (true) снимает защиту строки: поля становятся редактируемыми.</div>
+  <div class="preview-table-wrap">
+    <table class="preview-table" id="previewTable"></table>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr id="headRow"></tr></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<footer class="app">
+  Настройки хранятся в localStorage браузера (ключ <code>vitaauto_column_matrix_v1</code>), не шифруются и не покидают этот компьютер.
+  Для переноса правил в 1С используйте экспорт JSON. При изменении структуры матрицы увеличивайте номер версии в файле.
+</footer>
+
+<div class="modal-overlay" id="logModalOverlay" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Журнал изменений матрицы</h2>
+      <button class="btn-close" id="btnCloseLog" title="Закрыть">✕</button>
+    </div>
+    <div class="modal-actions">
+      <span class="badge" id="logCount"></span>
+      <button class="danger" id="btnClearLog">Очистить журнал</button>
+    </div>
+    <div class="modal-body">
+      <table class="log-table" id="logTable">
+        <thead><tr><th>Время</th><th>Действие</th><th>Роль</th><th>Уровень</th><th>Статус</th><th>Колонка</th><th>Поле</th><th>Было</th><th>Стало</th></tr></thead>
+        <tbody id="logTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var STORAGE_KEY = 'vitaauto_column_matrix_v1';
+  var LOG_KEY = 'vitaauto_column_matrix_v1_log';
+  var LOG_LIMIT = 500;
+  var SCHEMA_VERSION = 1;
+
+  var ROLES = [
+    {id:'manager', title:'Менеджер'},
+    {id:'storekeeper', title:'Кладовщик / Сборщик'},
+    {id:'chief_mechanic', title:'Главный механик'},
+    {id:'admin', title:'Администратор'},
+    {id:'supplier', title:'Поставщик'},
+    {id:'client', title:'Клиент'}
+  ];
+
+  var STATUSES = [
+    {id:'new', title:'Новый'},
+    {id:'ordered', title:'Заказано у поставщика'},
+    {id:'paid', title:'Оплачено'},
+    {id:'in_transit', title:'В пути'},
+    {id:'awaiting_receipt', title:'Ожидаем поступление'},
+    {id:'acceptance', title:'Приемка'},
+    {id:'reserve', title:'Резервирование'},
+    {id:'assembly', title:'Комплектация'},
+    {id:'ready_to_ship', title:'Готово к отгрузке'},
+    {id:'shipped', title:'Отгружено'},
+    {id:'return', title:'Возврат'},
+    {id:'closed', title:'Закрыт'}
+  ];
+
+  // Канон заголовков: Google Sheet 1W-WQ1MzvItG4PtxDANAf6aVg71IiNIhjBxI2fhY4ZRM (Лист1)
+  var COLUMNS = [
+    {id:'cell_select', title:'поле выбора ячеек', group:'system'},
+    {id:'row_number', title:'№ п/п', group:'system'},
+    {id:'doc_signed_original', title:'Документ подписан оригинал', group:'doc_flag', type:'bool'},
+    {id:'shipment_date', title:'Дата отгрузки', group:'auto'},
+    {id:'shipment_number', title:'Номер отгрузки', group:'auto'},
+    {id:'order_date', title:'Дата заказа', group:'auto'},
+    {id:'order_internal_number', title:'№ заказ внутренний наш', group:'auto'},
+    {id:'order_client_number', title:'№ заказ клиент', group:'order_header'},
+    {id:'customer', title:'Заказчик', group:'order_header'},
+    {id:'contract', title:'Договор с заказчиком', group:'order_header'},
+    {id:'service_type', title:'Вид услуги', group:'order_header'},
+    {id:'brand_fact', title:'Марка', group:'fact'},
+    {id:'model_fact', title:'Модель', group:'fact'},
+    {id:'gosnomer_fact', title:'Госномер', group:'fact'},
+    {id:'grz_fact', title:'№ Шасии', group:'fact'},
+    {id:'vin_fact', title:'VIN (ХТС)', group:'fact'},
+    {id:'engine_fact', title:'Двигатель', group:'fact'},
+    {id:'urgency_fact', title:'Срочность (ФАКТ) / комментарий заказчика', group:'fact'},
+    {id:'vehicle_plate_fact', title:'Машина ГРЗ (ФАКТ)', group:'fact'},
+    {id:'territory_fact', title:'Территория (ФАКТ)', group:'fact'},
+    {id:'name_fact', title:'Наименование (ФАКТ)', group:'fact_editable'},
+    {id:'article_fact', title:'Артикул (ФАКТ)', group:'fact_editable'},
+    {id:'qty_fact', title:'Кол-во (ФАКТ)', group:'fact'},
+    {id:'unit_fact', title:'Ед. изм. (ФАКТ)', group:'fact'},
+    {id:'name', title:'Наименование', group:'nomenclature'},
+    {id:'article', title:'Артикул', group:'nomenclature'},
+    {id:'code_aa', title:'Код А-А / код поставщика', group:'nomenclature'},
+    {id:'unit', title:'Ед. изм.', group:'nomenclature'},
+    {id:'qty', title:'Кол-во', group:'nomenclature', type:'decimal'},
+    {id:'qty_norm_hours_client', title:'Кол-во норма час товар для клиента', group:'nomenclature', type:'decimal'},
+    {id:'stock_qty', title:'Кол-во в наличии на складе', group:'stock', type:'decimal'},
+    {id:'reserve_qty', title:'Кол-во в резерве', group:'stock', type:'decimal'},
+    {id:'ordered_in_transit_qty', title:'Кол-во заказанного в пути / свободное', group:'stock'},
+    {id:'batch_fifo', title:'№ партии ФИФО / выбор партии', group:'stock'},
+    {id:'line_status', title:'Статус заявки', group:'status'},
+    {id:'price', title:'Цена (себес.)', group:'pricing', type:'decimal'},
+    {id:'sum', title:'Сумма (себес.)', group:'pricing', type:'decimal'},
+    {id:'payment_form', title:'Форма оплаты', group:'payment'},
+    {id:'rrc', title:'РРЦ', group:'margin_locked'},
+    {id:'paid_status', title:'Оплачено (счёт, оплата, постоплата)', group:'payment'},
+    {id:'coefficient', title:'Коэфф', group:'margin_open'},
+    {id:'extra_field_1', title:'Цена продажи', group:'pricing', type:'decimal'},
+    {id:'extra_field_2', title:'Сумма продажи', group:'pricing', type:'decimal'},
+    {id:'supplier', title:'Поставщик', group:'receipt'},
+    {id:'receipt_date', title:'Дата получения', group:'receipt'},
+    {id:'upd_date', title:'Дата УПД', group:'receipt'},
+    {id:'upd_number', title:'№ УПД', group:'receipt'},
+    {id:'supplier_ship_territory', title:'Территория отгрузки поставщиком', group:'receipt'},
+    {id:'comment', title:'Комментарий', group:'comment'}
+  ];
+
+  // Примеры строк реальной таблицы (для наглядного предпросмотра прав роли)
+  var SAMPLE_ROWS = [
+    { label:'Пример 1 — стандартная позиция в наличии', values:{
+      cell_select:'', row_number:'1', doc_signed_original:false, shipment_date:'04.02.2026', shipment_number:'141', order_date:'02.02.2026',
+      order_internal_number:'ЗК-0141', order_client_number:'—', customer:'ООО «СтройТранс»', contract:'Д-22/2026',
+      service_type:'Запчасть', brand_fact:'КАМАЗ', model_fact:'65115', gosnomer_fact:'А590СЕ197', grz_fact:'А590СЕ197', vin_fact:'XTC651150R1234567', engine_fact:'740.30-260',
+      urgency_fact:'—', vehicle_plate_fact:'А590СЕ197', territory_fact:'СПАК',
+      name_fact:'Фонарь задний КАМАЗ левый ТЕХАВТОСВЕТ', article_fact:'7452-262', qty_fact:'1,00', unit_fact:'шт',
+      name:'Фонарь задний КАМАЗ 24V левый ТЕХАВТОСВЕТ', article:'7452-262 / 7472.3716-04', code_aa:'622563',
+      unit:'шт', qty:'1,00', qty_norm_hours_client:'0,00', stock_qty:'12,00', reserve_qty:'1,00', ordered_in_transit_qty:'0,00 / 11,00',
+      batch_fifo:'Партия №04-2026', line_status:'Резервирование', price:'1 164,49', sum:'1 164,49',
+      payment_form:'Безнал', rrc:'2 048,00', paid_status:'Оплачено', coefficient:'15%',
+      extra_field_1:'1 339,16', extra_field_2:'1 339,16', supplier:'АЛЬЯНС', receipt_date:'04.02.2026',
+      upd_date:'04.02.2026', upd_number:'УПД-3391', supplier_ship_territory:'КЕТЧЕРСКАЯ', comment:'Стандартная отгрузка'
+    }},
+    { label:'Пример 2 — позиция ждёт опознания (артикул не найден)', values:{
+      cell_select:'', row_number:'2', doc_signed_original:false, shipment_date:'—', shipment_number:'—', order_date:'02.02.2026',
+      order_internal_number:'ЗК-0142', order_client_number:'—', customer:'Частный клиент', contract:'—',
+      service_type:'Запчасть', brand_fact:'ГАЗ', model_fact:'3302 Бизнес', gosnomer_fact:'М141МН777', grz_fact:'М141МН777', vin_fact:'X96330200R7654321', engine_fact:'УМЗ-4216',
+      urgency_fact:'срочно', vehicle_plate_fact:'М141МН777', territory_fact:'СПАК',
+      name_fact:'Шкив ГАЗ-3302 Бизнес дв.УМЗ-4216', article_fact:'4216.1005074', qty_fact:'1,00', unit_fact:'шт',
+      name:'—', article:'—', code_aa:'—', unit:'—', qty:'1,00', qty_norm_hours_client:'0,00', stock_qty:'0,00', reserve_qty:'0,00',
+      ordered_in_transit_qty:'0,00', batch_fifo:'—', line_status:'Не опознан', price:'0,00', sum:'0,00',
+      payment_form:'—', rrc:'—', paid_status:'—', coefficient:'—', extra_field_1:'0,00', extra_field_2:'0,00',
+      supplier:'—', receipt_date:'—', upd_date:'—', upd_number:'—', supplier_ship_territory:'—',
+      comment:'Ожидает опознания администратором, нужна фотофиксация'
+    }},
+    { label:'Пример 3 — заказ закрыт и отгружен клиенту разблок.', values:{
+      cell_select:'', row_number:'3', doc_signed_original:true, shipment_date:'06.02.2026', shipment_number:'145', order_date:'06.02.2026',
+      order_internal_number:'ЗК-0145', order_client_number:'КЛ-778', customer:'ИП Кетчерская', contract:'Д-05/2026',
+      service_type:'Запчасть', brand_fact:'КАМАЗ', model_fact:'54115', gosnomer_fact:'Е427ЕВ777', grz_fact:'Е427ЕВ777', vin_fact:'XTC541150R9876543', engine_fact:'740.51-320',
+      urgency_fact:'—', vehicle_plate_fact:'Е427ЕВ777', territory_fact:'АРМ',
+      name_fact:'Крышка КАМАЗ редуктора среднего моста', article_fact:'54115-2502209', qty_fact:'1,00', unit_fact:'шт',
+      name:'Крышка КАМАЗ редуктора среднего моста', article:'54115-2502209', code_aa:'633603', unit:'шт', qty:'1,00',
+      qty_norm_hours_client:'2,50', stock_qty:'0,00', reserve_qty:'0,00', ordered_in_transit_qty:'0,00', batch_fifo:'Партия №01-2026',
+      line_status:'Отгружено', price:'2 417,43', sum:'2 417,43', payment_form:'Безнал', rrc:'4 800,00',
+      paid_status:'Оплачено', coefficient:'12%', extra_field_1:'2 780,04', extra_field_2:'2 780,04', supplier:'АЛЬЯНС',
+      receipt_date:'06.02.2026', upd_date:'06.02.2026', upd_number:'УПД-3402', supplier_ship_territory:'КЕТЧЕРСКАЯ',
+      comment:'Получено лично представителем клиента (САМИ)'
+    }}
+  ];
+
+  var EDIT_LABELS = {
+    none:'Не редактируется', all:'Все, кому видно', creator:'Только создатель',
+    admin:'Только админ', role:'Выбранная роль'
+  };
+  var EDIT_VALUES = ['none','all','creator','admin','role'];
+
+  var EARLY_STATUSES = ['new','ordered','paid','in_transit','awaiting_receipt'];
+
+  // ---- Ролевые профили по умолчанию (визуальные группы колонок) ----
+  var ROLE_PROFILES = {
+    manager: {
+      system:{visible:true, editable:'none'}, doc_flag:{visible:true, editable:'all'}, auto:{visible:true, editable:'none'},
+      order_header:{visible:true, editable:'all'}, fact:{visible:true, editable:'all'},
+      fact_editable:{visible:true, editable:'all'}, nomenclature:{visible:true, editable:'all'},
+      stock:{visible:true, editable:'none'}, status:{visible:true, editable:'none'},
+      pricing:{visible:true, editable:'all'}, payment:{visible:true, editable:'all'},
+      margin_locked:{visible:true, editable:'none'}, margin_open:{visible:true, editable:'all'},
+      extra:{visible:false, editable:'none'}, receipt:{visible:true, editable:'none'},
+      comment:{visible:true, editable:'all'}
+    },
+    storekeeper: {
+      system:{visible:true, editable:'none'}, doc_flag:{visible:true, editable:'all'}, auto:{visible:true, editable:'none'},
+      order_header:{visible:true, editable:'none'}, fact:{visible:true, editable:'none'},
+      fact_editable:{visible:true, editable:'all'}, nomenclature:{visible:true, editable:'all'},
+      stock:{visible:true, editable:'all'}, status:{visible:true, editable:'none'},
+      pricing:{visible:true, editable:'none'}, payment:{visible:false, editable:'none'},
+      margin_locked:{visible:false, editable:'none'}, margin_open:{visible:false, editable:'none'},
+      extra:{visible:false, editable:'none'}, receipt:{visible:true, editable:'all'},
+      comment:{visible:true, editable:'all'}
+    },
+    admin: {
+      system:{visible:true, editable:'none'}, doc_flag:{visible:true, editable:'all'}, auto:{visible:true, editable:'all'},
+      order_header:{visible:true, editable:'all'}, fact:{visible:true, editable:'all'},
+      fact_editable:{visible:true, editable:'all'}, nomenclature:{visible:true, editable:'all'},
+      stock:{visible:true, editable:'all'}, status:{visible:true, editable:'all'},
+      pricing:{visible:true, editable:'all'}, payment:{visible:true, editable:'all'},
+      margin_locked:{visible:true, editable:'all'}, margin_open:{visible:true, editable:'all'},
+      extra:{visible:true, editable:'all'}, receipt:{visible:true, editable:'all'},
+      comment:{visible:true, editable:'all'}
+    },
+    supplier: {
+      system:{visible:false, editable:'none'}, doc_flag:{visible:false, editable:'none'}, auto:{visible:false, editable:'none'},
+      order_header:{visible:false, editable:'none'}, fact:{visible:false, editable:'none'},
+      fact_editable:{visible:false, editable:'none'}, nomenclature:{visible:true, editable:'none'},
+      stock:{visible:false, editable:'none'}, status:{visible:true, editable:'none'},
+      pricing:{visible:true, editable:'none'}, payment:{visible:false, editable:'none'},
+      margin_locked:{visible:false, editable:'none'}, margin_open:{visible:false, editable:'none'},
+      extra:{visible:false, editable:'none'}, receipt:{visible:false, editable:'none'},
+      comment:{visible:true, editable:'all'}
+    },
+    client: {
+      system:{visible:false, editable:'none'}, doc_flag:{visible:false, editable:'none'}, auto:{visible:true, editable:'none'},
+      order_header:{visible:true, editable:'none'}, fact:{visible:false, editable:'none'},
+      fact_editable:{visible:false, editable:'none'}, nomenclature:{visible:true, editable:'none'},
+      stock:{visible:false, editable:'none'}, status:{visible:true, editable:'none'},
+      pricing:{visible:true, editable:'none'}, payment:{visible:false, editable:'none'},
+      margin_locked:{visible:false, editable:'none'}, margin_open:{visible:false, editable:'none'},
+      extra:{visible:false, editable:'none'}, receipt:{visible:false, editable:'none'},
+      comment:{visible:true, editable:'none'}
+    }
+  };
+  ROLE_PROFILES.chief_mechanic = ROLE_PROFILES.manager;
+
+  var COLUMNS_BY_ID = {};
+  COLUMNS.forEach(function(c){ COLUMNS_BY_ID[c.id] = c; });
+  var ROLE_IDS = ROLES.map(function(r){return r.id;});
+  var STATUS_IDS = STATUSES.map(function(s){return s.id;});
+  var COLUMN_IDS = COLUMNS.map(function(c){return c.id;});
+
+  function enforceConstraints(cell){
+    if (!cell.visible){ cell.editable='none'; cell.required=false; cell.editableRole=null; }
+    if (cell.editable !== 'role') cell.editableRole = null;
+    if (cell.required && cell.editable === 'none') cell.editable = 'all';
+    if (cell.required && !cell.visible) cell.visible = true;
+    return cell;
+  }
+
+  function computeDefaultCell(roleId, colId, statusId){
+    var col = COLUMNS_BY_ID[colId];
+    var profile = ROLE_PROFILES[roleId][col.group];
+    var cell = {visible:profile.visible, editable:profile.editable, required:false, editableRole:null};
+
+    if (roleId === 'storekeeper' && col.group === 'receipt' && EARLY_STATUSES.indexOf(statusId) !== -1){
+      cell.visible = false;
+    }
+    if (roleId === 'manager' && statusId === 'new' && (colId==='name'||colId==='article'||colId==='qty')){
+      cell.required = true;
+    }
+    if (roleId === 'storekeeper' && statusId === 'acceptance' && (colId==='receipt_date'||colId==='upd_number')){
+      cell.required = true;
+    }
+    if (statusId === 'closed' && roleId !== 'admin' && colId !== 'doc_signed_original'){
+      cell.editable = 'none';
+    }
+    return enforceConstraints(cell);
+  }
+
+  function buildDefaultMatrix(){
+    function buildLevel(){
+      var m = {};
+      ROLES.forEach(function(r){
+        m[r.id] = {};
+        STATUSES.forEach(function(s){
+          m[r.id][s.id] = {};
+          COLUMNS.forEach(function(c){
+            m[r.id][s.id][c.id] = computeDefaultCell(r.id, c.id, s.id);
+          });
+        });
+      });
+      return m;
+    }
+    return {order: buildLevel(), line: buildLevel()};
+  }
+
+  function buildDefaultState(){
+    return {
+      version: SCHEMA_VERSION,
+      updatedAt: new Date().toISOString(),
+      settings: {statusLevel:'order', activeRole:'manager', statusViewMode:'all', currentStatusIndex:0},
+      roles: ROLE_IDS.slice(),
+      statuses: STATUSES.map(function(s){return {id:s.id, title:s.title};}),
+      columns: COLUMNS.map(function(c){return {id:c.id, title:c.title, group:c.group, type:c.type||null};}),
+      matrix: buildDefaultMatrix()
+    };
+  }
+
+  function syncCanonicalColumns(st){
+    var prev = {};
+    (st.columns || []).forEach(function(c){ if (c && c.id) prev[c.id] = c; });
+    st.columns = COLUMNS.map(function(c){
+      return {id:c.id, title:c.title, group:c.group, type:c.type||null};
+    });
+    ['order','line'].forEach(function(level){
+      if (!st.matrix || !st.matrix[level]) return;
+      ROLES.forEach(function(r){
+        if (!st.matrix[level][r.id]) st.matrix[level][r.id] = {};
+        STATUSES.forEach(function(s){
+          if (!st.matrix[level][r.id][s.id]) st.matrix[level][r.id][s.id] = {};
+          COLUMNS.forEach(function(c){
+            if (!st.matrix[level][r.id][s.id][c.id]) {
+              st.matrix[level][r.id][s.id][c.id] = computeDefaultCell(r.id, c.id, s.id);
+            }
+          });
+        });
+      });
+    });
+    return st;
+  }
+
+  function validateImport(obj){
+    if (!obj || typeof obj !== 'object') return 'файл не является корректным JSON-объектом';
+    if (obj.version !== SCHEMA_VERSION) return 'неподдерживаемая версия схемы: ' + obj.version;
+    if (!Array.isArray(obj.roles) || !Array.isArray(obj.statuses) || !Array.isArray(obj.columns)) return 'отсутствуют массивы roles/statuses/columns';
+    var roleSet = {}; obj.roles.forEach(function(r){roleSet[r]=true;});
+    for (var i=0;i<ROLE_IDS.length;i++){ if(!roleSet[ROLE_IDS[i]]) return 'отсутствует обязательная роль: '+ROLE_IDS[i]; }
+    for (var j=0;j<obj.roles.length;j++){ if(ROLE_IDS.indexOf(obj.roles[j])===-1) return 'неизвестная роль: '+obj.roles[j]; }
+    var statusSet = {}; obj.statuses.forEach(function(s){ if(!s||!s.id) return; statusSet[s.id]=true; });
+    var colSet = {}; obj.columns.forEach(function(c){ if(!c||!c.id) return; colSet[c.id]=true; });
+    if (!obj.matrix || !obj.matrix.order || !obj.matrix.line) return 'отсутствует matrix.order/matrix.line';
+    var levels = ['order','line'];
+    for (var l=0;l<levels.length;l++){
+      var lvl = obj.matrix[levels[l]];
+      for (var r2=0;r2<obj.roles.length;r2++){
+        var rid = obj.roles[r2];
+        if (!lvl[rid]) return 'в matrix.'+levels[l]+' отсутствует роль '+rid;
+        for (var sid in lvl[rid]){
+          if (!statusSet[sid]) return 'в matrix.'+levels[l]+'.'+rid+' неизвестный статус: '+sid;
+          for (var cid in lvl[rid][sid]){
+            if (!colSet[cid]) return 'в matrix.'+levels[l]+'.'+rid+'.'+sid+' неизвестная колонка: '+cid;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function normalizeSettings(st){
+    if (!st.settings) st.settings = {};
+    if (st.settings.statusLevel !== 'line') st.settings.statusLevel = 'order';
+    if (ROLE_IDS.indexOf(st.settings.activeRole) === -1) st.settings.activeRole = 'manager';
+    if (st.settings.statusViewMode !== 'single') st.settings.statusViewMode = 'all';
+    if (typeof st.settings.currentStatusIndex !== 'number' || st.settings.currentStatusIndex < 0) st.settings.currentStatusIndex = 0;
+    syncCanonicalColumns(st);
+    return st;
+  }
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return buildDefaultState();
+      var parsed = JSON.parse(raw);
+      var err = validateImport(parsed);
+      if (err){ console.warn('Сохранённая матрица повреждена ('+err+'), используются значения по умолчанию.'); return buildDefaultState(); }
+      return normalizeSettings(parsed);
+    }catch(e){
+      return buildDefaultState();
+    }
+  }
+
+  function loadLog(){
+    try{ var raw = localStorage.getItem(LOG_KEY); var arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
+    catch(e){ return []; }
+  }
+  function saveLog(){ localStorage.setItem(LOG_KEY, JSON.stringify(changeLog)); }
+  function pushLog(entry){
+    entry.ts = new Date().toISOString();
+    changeLog.unshift(entry);
+    if (changeLog.length > LOG_LIMIT) changeLog.length = LOG_LIMIT;
+    saveLog();
+    updateLogBadge();
+    var overlay = document.getElementById('logModalOverlay');
+    if (overlay && !overlay.hidden) renderLogTable();
+  }
+  function updateLogBadge(){
+    var badge = document.getElementById('logBadge');
+    if (!badge) return;
+    if (changeLog.length){ badge.hidden = false; badge.textContent = changeLog.length > 99 ? '99+' : String(changeLog.length); }
+    else badge.hidden = true;
+  }
+  function formatFieldValue(field, v){
+    if (field === 'visible' || field === 'required') return v ? 'Да' : 'Нет';
+    if (field === 'editable') return EDIT_LABELS[v] || v;
+    if (field === 'editableRole') return v ? roleTitle(v) : '—';
+    return String(v);
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
+  }
+
+  var state = loadState();
+  var changeLog = loadLog();
+  var activeRole = state.settings.activeRole;
+
+  var saveTimer = null;
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      state.updatedAt = new Date().toISOString();
+      state.settings.activeRole = activeRole;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }, 300);
+  }
+
+  function currentLevel(){ return state.settings.statusLevel === 'line' ? 'line' : 'order'; }
+  function getColumns(){ return state.columns && state.columns.length ? state.columns : COLUMNS; }
+  function getStatuses(){ return state.statuses && state.statuses.length ? state.statuses : STATUSES; }
+  function roleTitle(id){ var r = ROLES.filter(function(x){return x.id===id;})[0]; return r ? r.title : id; }
+
+  function clampStatusIndex(idx, len){
+    if (!len) return 0;
+    return Math.max(0, Math.min(idx, len - 1));
+  }
+  function activeStatuses(){
+    var statuses = getStatuses();
+    if (state.settings.statusViewMode === 'single'){
+      var idx = clampStatusIndex(state.settings.currentStatusIndex, statuses.length);
+      return statuses[idx] ? [statuses[idx]] : [];
+    }
+    return statuses;
+  }
+
+  function ensureCell(level, roleId, statusId, colId){
+    var m = state.matrix[level];
+    if (!m[roleId]) m[roleId] = {};
+    if (!m[roleId][statusId]) m[roleId][statusId] = {};
+    if (!m[roleId][statusId][colId]) m[roleId][statusId][colId] = enforceConstraints({visible:true, editable:'none', required:false, editableRole:null});
+    return m[roleId][statusId][colId];
+  }
+
+  function cellClass(cell){
+    if (!cell.visible) return 'cell-gray';
+    if (cell.editable === 'none') return 'cell-yellow';
+    return 'cell-green';
+  }
+
+  // ---------------- Rendering ----------------
+
+  var elRoleTabs = document.getElementById('roleTabs');
+  var elHeadRow = document.getElementById('headRow');
+  var elBody = document.getElementById('tableBody');
+  var elSearch = document.getElementById('searchInput');
+  var elStatusLine = document.getElementById('statusLine');
+  var elLevelToggle = document.getElementById('levelToggle');
+  var elBulkPanel = document.getElementById('bulkPanel');
+  var elCopyRoleSource = document.getElementById('copyRoleSource');
+  var elCopyStatusSource = document.getElementById('copyStatusSource');
+  var elCopyStatusTarget = document.getElementById('copyStatusTarget');
+
+  function renderRoleTabs(){
+    elRoleTabs.innerHTML = ROLES.map(function(r){
+      return '<button data-role="'+r.id+'" class="'+(r.id===activeRole?'active':'')+'">'+r.title+'</button>';
+    }).join('');
+  }
+
+  function renderLevelToggle(){
+    var lvl = currentLevel();
+    elLevelToggle.querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('active', b.dataset.level === lvl);
+    });
+  }
+
+  function renderCopySelectors(){
+    elCopyRoleSource.innerHTML = ROLES.filter(function(r){return r.id!==activeRole;})
+      .map(function(r){return '<option value="'+r.id+'">'+r.title+'</option>';}).join('');
+    var statuses = getStatuses();
+    var opts = statuses.map(function(s){return '<option value="'+s.id+'">'+s.title+'</option>';}).join('');
+    elCopyStatusSource.innerHTML = opts;
+    elCopyStatusTarget.innerHTML = opts;
+  }
+
+  function renderHead(){
+    var statuses = activeStatuses();
+    var html = '<th class="col-head">Колонка интерфейса</th>';
+    statuses.forEach(function(s){ html += '<th>'+s.title+'</th>'; });
+    elHeadRow.innerHTML = html;
+  }
+
+  function renderStatusModeToggle(){
+    document.querySelectorAll('#statusModeToggle button').forEach(function(b){
+      b.classList.toggle('active', b.dataset.mode === state.settings.statusViewMode);
+    });
+  }
+
+  function renderStatusNav(){
+    var statuses = getStatuses();
+    var idx = clampStatusIndex(state.settings.currentStatusIndex, statuses.length);
+    state.settings.currentStatusIndex = idx;
+    var jump = document.getElementById('statusJump');
+    jump.innerHTML = statuses.map(function(s,i){
+      return '<option value="'+i+'"'+(i===idx?' selected':'')+'>'+s.title+'</option>';
+    }).join('');
+    document.getElementById('btnPrevStatus').disabled = idx <= 0;
+    document.getElementById('btnNextStatus').disabled = idx >= statuses.length - 1;
+  }
+
+  function isTruthyFlag(v){
+    return v === true || v === 'true' || v === 1 || v === '1' || v === 'да' || v === 'Да';
+  }
+
+  function formatDecimal2(v){
+    if (v == null || v === '' || v === '—') return '0.00';
+    var n = Number(String(v).replace(/\s/g, '').replace(',', '.'));
+    if (!isFinite(n)) return '0.00';
+    return n.toFixed(2);
+  }
+
+  function renderPreview(){
+    var level = currentLevel();
+    var statuses = getStatuses();
+    var idx = clampStatusIndex(state.settings.currentStatusIndex, statuses.length);
+    var status = statuses[idx];
+    var table = document.getElementById('previewTable');
+    document.getElementById('previewRoleName').textContent = roleTitle(activeRole);
+    document.getElementById('previewStatusName').textContent = status ? status.title : '—';
+    if (!status){ table.innerHTML = ''; return; }
+
+    var columns = getColumns().filter(function(col){
+      return ensureCell(level, activeRole, status.id, col.id).visible;
+    });
+
+    if (!columns.length){
+      table.innerHTML = '<tbody><tr><td class="preview-empty">Роли «'+esc(roleTitle(activeRole))+'» на статусе «'+esc(status.title)+'» не видна ни одна колонка.</td></tr></tbody>';
+      return;
+    }
+
+    var headHtml = '<thead><tr><th>Пример</th>' + columns.map(function(col){
+      var cell = ensureCell(level, activeRole, status.id, col.id);
+      return '<th>'+esc(col.title)+(cell.required ? '<span class="req-star">*</span>' : '')+'</th>';
+    }).join('') + '</tr></thead>';
+
+    var bodyHtml = '<tbody>' + SAMPLE_ROWS.map(function(sample, rowIdx){
+      var unlocked = isTruthyFlag(sample.values.doc_signed_original);
+      var row = '<tr data-sample="'+rowIdx+'"><td style="font-weight:600;white-space:nowrap;color:var(--muted);">'+esc(sample.label)+(unlocked?' <span class="badge" title="Галка true: строка не защищена">разблок.</span>':'')+'</td>';
+      columns.forEach(function(col){
+        var cell = ensureCell(level, activeRole, status.id, col.id);
+        var colMeta = COLUMNS_BY_ID[col.id] || col;
+        var isBool = colMeta.type === 'bool' || col.id === 'doc_signed_original';
+        var isDecimal = colMeta.type === 'decimal';
+        var val = sample.values[col.id] != null ? sample.values[col.id] : (isBool ? false : (isDecimal ? '0.00' : '—'));
+        var readonly = cell.editable === 'none';
+        // Галка true → строка не защищена: остальные поля редактируются поверх матрицы
+        if (unlocked && col.id !== 'doc_signed_original' && col.id !== 'row_number' && cell.visible) {
+          readonly = false;
+        }
+        var cls = (readonly ? 'prev-readonly' : 'prev-editable') + (cell.required ? ' prev-required' : '');
+        var title = isBool
+          ? (isTruthyFlag(val) ? 'true: строка не защищена от изменения' : 'false: защита строки по матрице/статусу')
+          : (readonly ? 'Только чтение' : ('Редактируется: ' + EDIT_LABELS[cell.editable]));
+        if (isDecimal) title = 'Число до сотых · ' + title;
+        if (unlocked && !isBool) title = 'Строка разблокирована галкой «оригинал» · ' + title;
+        if (isBool) {
+          var canToggle = cell.editable !== 'none';
+          row += '<td class="'+cls+' prev-bool"><input type="checkbox" class="prev-doc-flag" data-sample="'+rowIdx+'" '+(isTruthyFlag(val)?'checked':'')+' '+(canToggle?'':'disabled')+' title="'+esc(title)+'"></td>';
+        } else if (isDecimal) {
+          row += '<td class="'+cls+'"><input type="number" step="0.01" min="0" inputmode="decimal" value="'+esc(formatDecimal2(val))+'" '+(readonly?'disabled':'')+' title="'+esc(title)+'"></td>';
+        } else {
+          row += '<td class="'+cls+'"><input type="text" value="'+esc(val)+'" '+(readonly?'disabled':'')+' title="'+esc(title)+'"></td>';
+        }
+      });
+      row += '</tr>';
+      return row;
+    }).join('') + '</tbody>';
+
+    table.innerHTML = headHtml + bodyHtml;
+  }
+
+  function editSelectHtml(cell){
+    var opts = EDIT_VALUES.map(function(v){
+      return '<option value="'+v+'"'+(cell.editable===v?' selected':'')+'>'+EDIT_LABELS[v]+'</option>';
+    }).join('');
+    return '<select class="c-editable">'+opts+'</select>';
+  }
+
+  function roleForSelectHtml(cell){
+    var opts = ROLES.map(function(r){
+      return '<option value="'+r.id+'"'+(cell.editableRole===r.id?' selected':'')+'>'+r.title+'</option>';
+    }).join('');
+    return '<select class="c-role-for"'+(cell.editable==='role'?'':' hidden')+'>'+opts+'</select>';
+  }
+
+  function renderTable(){
+    var level = currentLevel();
+    var columns = getColumns();
+    var statuses = activeStatuses();
+    var rowsHtml = '';
+    columns.forEach(function(col){
+      rowsHtml += '<tr data-col="'+col.id+'"><th class="row-head">'+col.title+'<span class="id">'+col.id+'</span></th>';
+      statuses.forEach(function(st){
+        var cell = ensureCell(level, activeRole, st.id, col.id);
+        rowsHtml += '<td class="matrix-cell '+cellClass(cell)+'" data-status="'+st.id+'" data-col="'+col.id+'">'
+          + '<div class="cell-stack">'
+          +   '<div class="chk-row">'
+          +     '<label class="chk"><input type="checkbox" class="c-visible" '+(cell.visible?'checked':'')+'>Видно</label>'
+          +     '<label class="chk"><input type="checkbox" class="c-required" '+(cell.required?'checked':'')+'>Обяз.</label>'
+          +   '</div>'
+          +   editSelectHtml(cell)
+          +   roleForSelectHtml(cell)
+          + '</div>'
+          + '</td>';
+      });
+      rowsHtml += '</tr>';
+    });
+    elBody.innerHTML = rowsHtml;
+    applySearchFilter();
+    var modeLabel = state.settings.statusViewMode==='single' ? 'один статус' : 'все статусы';
+    elStatusLine.textContent = 'Роль: ' + roleTitle(activeRole) + ' · Уровень статуса: ' + (level==='order'?'Заказ':'Деталь (строка)') + ' ('+modeLabel+') · обновлено ' + new Date(state.updatedAt).toLocaleString('ru-RU');
+  }
+
+  function applySearchFilter(){
+    var q = elSearch.value.trim().toLowerCase();
+    var rows = elBody.querySelectorAll('tr');
+    rows.forEach(function(tr){
+      var colId = tr.dataset.col;
+      var col = COLUMNS_BY_ID[colId] || {title:colId};
+      var match = !q || col.title.toLowerCase().indexOf(q)!==-1 || colId.toLowerCase().indexOf(q)!==-1;
+      tr.classList.toggle('filtered-out', !match);
+    });
+  }
+
+  function filteredColumnIds(){
+    var q = elSearch.value.trim().toLowerCase();
+    return getColumns().filter(function(c){
+      return !q || c.title.toLowerCase().indexOf(q)!==-1 || c.id.toLowerCase().indexOf(q)!==-1;
+    }).map(function(c){return c.id;});
+  }
+
+  function renderAll(){
+    renderRoleTabs();
+    renderLevelToggle();
+    renderStatusModeToggle();
+    renderStatusNav();
+    renderCopySelectors();
+    renderHead();
+    renderTable();
+    renderPreview();
+    updateLogBadge();
+  }
+
+  // ---------------- Events ----------------
+
+  elRoleTabs.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-role]');
+    if (!btn) return;
+    activeRole = btn.dataset.role;
+    state.settings.activeRole = activeRole;
+    scheduleSave();
+    renderRoleTabs();
+    renderCopySelectors();
+    renderTable();
+    renderPreview();
+  });
+
+  elLevelToggle.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-level]');
+    if (!btn) return;
+    state.settings.statusLevel = btn.dataset.level;
+    scheduleSave();
+    renderLevelToggle();
+    renderTable();
+    renderPreview();
+  });
+
+  document.getElementById('statusModeToggle').addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    state.settings.statusViewMode = btn.dataset.mode;
+    scheduleSave();
+    renderStatusModeToggle();
+    renderHead();
+    renderTable();
+  });
+
+  function onStatusIndexChange(){
+    scheduleSave();
+    renderStatusNav();
+    if (state.settings.statusViewMode === 'single'){ renderHead(); renderTable(); }
+    renderPreview();
+  }
+  document.getElementById('btnPrevStatus').addEventListener('click', function(){
+    state.settings.currentStatusIndex = Math.max(0, state.settings.currentStatusIndex - 1);
+    onStatusIndexChange();
+  });
+  document.getElementById('btnNextStatus').addEventListener('click', function(){
+    var len = getStatuses().length;
+    state.settings.currentStatusIndex = Math.min(len - 1, state.settings.currentStatusIndex + 1);
+    onStatusIndexChange();
+  });
+  document.getElementById('statusJump').addEventListener('change', function(e){
+    state.settings.currentStatusIndex = parseInt(e.target.value, 10) || 0;
+    onStatusIndexChange();
+  });
+
+  elSearch.addEventListener('input', applySearchFilter);
+
+  function logCellDiff(level, roleId, statusId, colId, before, after){
+    var fieldNames = {visible:'Видимость', editable:'Редактирование', required:'Обязательность', editableRole:'Роль-редактор'};
+    var col = COLUMNS_BY_ID[colId] || {title:colId};
+    var st = getStatuses().filter(function(s){return s.id===statusId;})[0] || {title:statusId};
+    ['visible','editable','required','editableRole'].forEach(function(f){
+      if (before[f] !== after[f]){
+        pushLog({
+          action:'Изменение ячейки', role:roleTitle(roleId), level: level==='order'?'Заказ':'Деталь',
+          status: st.title, column: col.title, field: fieldNames[f],
+          before: formatFieldValue(f, before[f]), after: formatFieldValue(f, after[f])
+        });
+      }
+    });
+  }
+
+  elBody.addEventListener('change', function(e){
+    var el = e.target;
+    var td = el.closest('td.matrix-cell');
+    if (!td) return;
+    var statusId = td.dataset.status, colId = td.dataset.col;
+    var level = currentLevel();
+    var cell = ensureCell(level, activeRole, statusId, colId);
+    var before = {visible:cell.visible, editable:cell.editable, required:cell.required, editableRole:cell.editableRole};
+
+    if (el.classList.contains('c-visible')) cell.visible = el.checked;
+    else if (el.classList.contains('c-required')) cell.required = el.checked;
+    else if (el.classList.contains('c-editable')) cell.editable = el.value;
+    else if (el.classList.contains('c-role-for')) cell.editableRole = el.value;
+
+    enforceConstraints(cell);
+    logCellDiff(level, activeRole, statusId, colId, before, cell);
+
+    // sync DOM back in case constraints altered other fields
+    td.className = 'matrix-cell ' + cellClass(cell);
+    td.querySelector('.c-visible').checked = cell.visible;
+    td.querySelector('.c-required').checked = cell.required;
+    td.querySelector('.c-editable').value = cell.editable;
+    var roleSel = td.querySelector('.c-role-for');
+    roleSel.hidden = cell.editable !== 'role';
+    if (cell.editable === 'role' && cell.editableRole) roleSel.value = cell.editableRole;
+
+    scheduleSave();
+    renderPreview();
+  });
+
+  // Bulk operations
+  document.getElementById('previewTable').addEventListener('change', function(e){
+    var el = e.target;
+    if (!el.classList.contains('prev-doc-flag')) return;
+    var idx = Number(el.getAttribute('data-sample'));
+    if (!SAMPLE_ROWS[idx]) return;
+    SAMPLE_ROWS[idx].values.doc_signed_original = !!el.checked;
+    renderPreview();
+  });
+
+  document.getElementById('btnBulk').addEventListener('click', function(){
+    elBulkPanel.classList.toggle('open');
+  });
+
+  function forEachTargetCell(fn){
+    var level = currentLevel();
+    var cols = filteredColumnIds();
+    var statuses = activeStatuses();
+    statuses.forEach(function(st){
+      cols.forEach(function(colId){
+        var cell = ensureCell(level, activeRole, st.id, colId);
+        fn(cell);
+      });
+    });
+    return {colsCount: cols.length, statusesCount: statuses.length};
+  }
+
+  var BULK_OP_LABELS = {
+    'show-all':'Массово: показать все', 'hide-all':'Массово: скрыть все',
+    'edit-all':'Массово: разрешить редактирование', 'edit-none':'Массово: только чтение',
+    'req-on':'Массово: сделать обязательным', 'req-off':'Массово: снять обязательность'
+  };
+
+  elBulkPanel.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-op]');
+    if (!btn) return;
+    var op = btn.dataset.op;
+    var scope;
+    if (op==='show-all') scope = forEachTargetCell(function(c){ c.visible=true; enforceConstraints(c); });
+    if (op==='hide-all') scope = forEachTargetCell(function(c){ c.visible=false; enforceConstraints(c); });
+    if (op==='edit-all') scope = forEachTargetCell(function(c){ c.visible=true; c.editable='all'; enforceConstraints(c); });
+    if (op==='edit-none') scope = forEachTargetCell(function(c){ c.editable='none'; enforceConstraints(c); });
+    if (op==='req-on') scope = forEachTargetCell(function(c){ if(c.visible && c.editable!=='none'){ c.required=true; enforceConstraints(c);} });
+    if (op==='req-off') scope = forEachTargetCell(function(c){ c.required=false; enforceConstraints(c); });
+    scheduleSave();
+    pushLog({
+      action: BULK_OP_LABELS[op] || ('Массовая операция: '+op), role: roleTitle(activeRole),
+      level: currentLevel()==='order'?'Заказ':'Деталь',
+      status: state.settings.statusViewMode==='single' ? 'текущий статус' : 'все статусы (' + (scope?scope.statusesCount:'?') + ')',
+      column: (scope?scope.colsCount:'?') + ' видимых колонок', field:'—', before:'—', after:'—'
+    });
+    renderTable();
+    renderPreview();
+  });
+
+  document.getElementById('btnCopyRole').addEventListener('click', function(){
+    var source = elCopyRoleSource.value;
+    if (!source) return;
+    var level = currentLevel();
+    getStatuses().forEach(function(st){
+      getColumns().forEach(function(col){
+        var src = ensureCell(level, source, st.id, col.id);
+        state.matrix[level][activeRole][st.id][col.id] = enforceConstraints({
+          visible:src.visible, editable:src.editable, required:src.required, editableRole:src.editableRole
+        });
+      });
+    });
+    scheduleSave();
+    pushLog({
+      action:'Копирование роли', role: roleTitle(activeRole), level: level==='order'?'Заказ':'Деталь',
+      status:'все статусы', column:'все колонки', field:'источник', before: roleTitle(source), after: roleTitle(activeRole)
+    });
+    renderTable();
+    renderPreview();
+  });
+
+  document.getElementById('btnCopyStatus').addEventListener('click', function(){
+    var source = elCopyStatusSource.value, target = elCopyStatusTarget.value;
+    if (!source || !target || source===target) return;
+    var level = currentLevel();
+    getColumns().forEach(function(col){
+      var src = ensureCell(level, activeRole, source, col.id);
+      state.matrix[level][activeRole][target][col.id] = enforceConstraints({
+        visible:src.visible, editable:src.editable, required:src.required, editableRole:src.editableRole
+      });
+    });
+    scheduleSave();
+    var srcTitle = (getStatuses().filter(function(s){return s.id===source;})[0]||{}).title || source;
+    var tgtTitle = (getStatuses().filter(function(s){return s.id===target;})[0]||{}).title || target;
+    pushLog({
+      action:'Копирование статуса', role: roleTitle(activeRole), level: level==='order'?'Заказ':'Деталь',
+      status: tgtTitle, column:'все колонки', field:'источник', before: srcTitle, after: tgtTitle
+    });
+    renderTable();
+    renderPreview();
+  });
+
+  // Export / Import / Reset
+  document.getElementById('btnExport').addEventListener('click', function(){
+    state.updatedAt = new Date().toISOString();
+    var blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'column-matrix.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('btnImport').addEventListener('click', function(){
+    document.getElementById('importFile').click();
+  });
+
+  document.getElementById('importFile').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var parsed = JSON.parse(reader.result);
+        var err = validateImport(parsed);
+        if (err){ alert('Ошибка импорта: ' + err); return; }
+        state = normalizeSettings(parsed);
+        activeRole = state.settings.activeRole;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        pushLog({action:'Импорт JSON', role:'—', level:'—', status:'—', column:'—', field:'файл', before:'—', after: file.name});
+        renderAll();
+        alert('Матрица успешно импортирована.');
+      }catch(ex){
+        alert('Не удалось прочитать JSON: ' + ex.message);
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+  });
+
+  document.getElementById('btnReset').addEventListener('click', function(){
+    if (!confirm('Сбросить все настройки матрицы к значениям по умолчанию? Действие необратимо.')) return;
+    state = buildDefaultState();
+    activeRole = 'manager';
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    pushLog({action:'Сброс к значениям по умолчанию', role:'—', level:'—', status:'—', column:'—', field:'—', before:'—', after:'—'});
+    renderAll();
+  });
+
+  // Журнал изменений (модальное окно)
+  function renderLogTable(){
+    var tbody = document.getElementById('logTableBody');
+    document.getElementById('logCount').textContent = 'Записей: ' + changeLog.length;
+    if (!changeLog.length){
+      tbody.innerHTML = '<tr><td colspan="9" style="color:var(--muted);font-style:italic;">Журнал пуст</td></tr>';
+      return;
+    }
+    tbody.innerHTML = changeLog.map(function(l){
+      return '<tr>'
+        + '<td>'+esc(new Date(l.ts).toLocaleString('ru-RU'))+'</td>'
+        + '<td>'+esc(l.action||'')+'</td>'
+        + '<td>'+esc(l.role||'')+'</td>'
+        + '<td>'+esc(l.level||'')+'</td>'
+        + '<td>'+esc(l.status||'')+'</td>'
+        + '<td>'+esc(l.column||'')+'</td>'
+        + '<td>'+esc(l.field||'')+'</td>'
+        + '<td>'+esc(l.before||'')+'</td>'
+        + '<td>'+esc(l.after||'')+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  var elLogOverlay = document.getElementById('logModalOverlay');
+  document.getElementById('btnLog').addEventListener('click', function(){
+    elLogOverlay.hidden = false;
+    renderLogTable();
+  });
+  document.getElementById('btnCloseLog').addEventListener('click', function(){ elLogOverlay.hidden = true; });
+  elLogOverlay.addEventListener('click', function(e){ if (e.target === elLogOverlay) elLogOverlay.hidden = true; });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !elLogOverlay.hidden) elLogOverlay.hidden = true; });
+  document.getElementById('btnClearLog').addEventListener('click', function(){
+    if (!confirm('Очистить журнал изменений?')) return;
+    changeLog = [];
+    saveLog();
+    updateLogBadge();
+    renderLogTable();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
